@@ -67,6 +67,7 @@ class JWT
             if (!is_array($allowed_algs) || !in_array($header->alg, $allowed_algs)) {
                 throw new DomainException('Algorithm not allowed');
             }
+            /** BEGIN UNCOMMENT THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER
             if (is_array($key)) {
                 if (isset($header->kid)) {
                     $key = $key[$header->kid];
@@ -79,6 +80,40 @@ class JWT
             if (!JWT::verify("$headb64.$bodyb64", $sig, $key, $header->alg)) {
                 throw new SignatureInvalidException('Signature verification failed');
             }
+            ** END UNCOMMENT THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER */
+
+            /** BEGIN REMOVE THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER */
+
+            $is_key_verified = false;
+
+            if (is_array($key)) {
+                if (isset($header->kid)) {
+                    $key = $key[$header->kid];
+                    // Check the signature
+                    $is_key_verified = JWT::verify("$headb64.$bodyb64", $sig, $key, $header->alg);
+                } else {
+                    foreach ($key as $potential_key) {
+                        try {
+                            if (JWT::verify("$headb64.$bodyb64", $sig, $potential_key, $header->alg)) {
+                                $is_key_verified = true;
+                                break;
+                            }
+                        } catch (DomainException $e) {
+                            // swallow since JWT::verify always throws Domain Exception
+                            // if the key doesn't check out and we check all keys when
+                            // kid is not specified
+                        }
+                    }
+                }
+            } else {
+                $is_key_verified = JWT::verify("$headb64.$bodyb64", $sig, $key, $header->alg);
+            }
+
+            if (!$is_key_verified) {
+                throw new SignatureInvalidException('Signature verification failed');
+            }
+
+            /** END REMOVE THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER */
 
             // Check if the nbf if it is defined. This is the time that the
             // token can actually be used. If it's not yet that time, abort.

@@ -161,27 +161,9 @@ class JWT
 
             /** END REMOVE THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER */
 
-            // Check if the nbf if it is defined. This is the time that the
-            // token can actually be used. If it's not yet that time, abort.
-            if (isset($payload->nbf) && $payload->nbf > (time() + self::$leeway)) {
-                throw new BeforeValidException(
-                    'Cannot handle token prior to ' . date(DateTime::ISO8601, $payload->nbf)
-                );
-            }
-
-            // Check that this token has been created before 'now'. This prevents
-            // using tokens that have been created for later use (and haven't
-            // correctly used the nbf claim).
-            if (isset($payload->iat) && $payload->iat > (time() + self::$leeway)) {
-                throw new BeforeValidException(
-                    'Cannot handle token prior to ' . date(DateTime::ISO8601, $payload->iat)
-                );
-            }
-
-            // Check if this token has expired.
-            if (isset($payload->exp) && (time() - self::$leeway) >= $payload->exp) {
-                throw new ExpiredException('Expired token');
-            }
+            JWT::validateNotBeforeClaim($payload);
+            JWT::validateIssuedAtClaim($payload);
+            JWT::validateExpirationClaim($payload);
         }
 
         return $payload;
@@ -291,6 +273,56 @@ class JWT
                 $status |= (self::safeStrlen($signature) ^ self::safeStrlen($hash));
 
                 return ($status === 0);
+        }
+    }
+
+
+    /**
+     * Check if this token has expired
+     *
+     * @param object $payload Object representation of JWT payload
+     * @return void
+     * @throws ExpiredException
+     */
+    public static function validateExpirationClaim($payload)
+    {
+        if (isset($payload->exp) && (Global_Functions::time() - self::$leeway) >= $payload->exp) {
+            throw new ExpiredException('Expired token');
+        }
+    }
+
+    /**
+     * Check the nbf if it is defined. This is the time that the
+     * token can actually be used. If it's not yet that time, throw an exception.
+     *
+     * @param object $payload Object representation of JWT payload
+     * @return void
+     * @throws BeforeValidException
+     */
+    public static function validateNotBeforeClaim($payload)
+    {
+        if (isset($payload->nbf) && $payload->nbf > (Global_Functions::time() + self::$leeway)) {
+            throw new BeforeValidException(
+                'Cannot handle token prior to ' . date(DateTime::ISO8601, $payload->nbf)
+            );
+        }
+    }
+
+    /**
+     * Check that this token has been created before 'now'. This prevents
+     * using tokens that have been created for later use (and haven't
+     * correctly used the nbf claim).
+     *
+     * @param object $payload Object representation of JWT payload
+     * @return void
+     * @throws BeforeValidException
+     */
+    public static function validateIssuedAtClaim($payload)
+    {
+        if (isset($payload->iat) && $payload->iat > (Global_Functions::time() + self::$leeway)) {
+            throw new BeforeValidException(
+                'Cannot handle token prior to ' . date(DateTime::ISO8601, $payload->iat)
+            );
         }
     }
 

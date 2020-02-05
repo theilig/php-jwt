@@ -36,6 +36,50 @@ class JWT
      * Decodes a JWT string into a PHP object.
      *
      * @param string      $jwt           The JWT
+     *
+     * @return object      The JWT's payload as a PHP object
+     *
+     * @throws DomainException              Algorithm was not provided
+     * @throws UnexpectedValueException     Provided JWT was invalid
+     *
+     * @uses jsonDecode
+     * @uses urlsafeB64Decode
+     */
+    public static function decodeHeaderFromJWT($jwt)
+    {
+        $tks = explode('.', $jwt);
+        if (count($tks) != 3) {
+            throw new UnexpectedValueException('Wrong number of segments');
+        }
+        $headb64 = $tks[0];
+        if (null === ($header = JWT::jsonDecode(JWT::urlsafeB64Decode($headb64)))) {
+            throw new UnexpectedValueException('Invalid header encoding');
+        }
+        return $header;
+    }
+
+    /**
+     * Verify that the header algorithm exists and is supported and allowed
+     * @param Object $header
+     * @param array $allowedAlgs
+     */
+    public static function validateHeader($header, $allowedAlgs = [])
+    {
+        if (empty($header->alg)) {
+            throw new DomainException('Empty algorithm');
+        }
+        if (empty(self::$supported_algs[$header->alg])) {
+            throw new DomainException('Algorithm not supported');
+        }
+        if (!is_array($allowedAlgs) || !in_array($header->alg, $allowedAlgs)) {
+            throw new DomainException('Algorithm not allowed');
+        }
+    }
+
+    /**
+     * Decodes a JWT string into a PHP object.
+     *
+     * @param string      $jwt           The JWT
      * @param string|Array|null $key     The secret key, or map of keys
      * @param Array       $allowed_algs  List of supported verification algorithms
      *
@@ -66,15 +110,7 @@ class JWT
         }
         $sig = JWT::urlsafeB64Decode($cryptob64);
         if (isset($key)) {
-            if (empty($header->alg)) {
-                throw new DomainException('Empty algorithm');
-            }
-            if (empty(self::$supported_algs[$header->alg])) {
-                throw new DomainException('Algorithm not supported');
-            }
-            if (!is_array($allowed_algs) || !in_array($header->alg, $allowed_algs)) {
-                throw new DomainException('Algorithm not allowed');
-            }
+            JWT::validateHeader($header, $allowed_algs);
             /** BEGIN UNCOMMENT THIS BLOCK AFTER WE ENFORCE 'kid' IN THE HEADER
             if (is_array($key) || $key instanceof \ArrayAccess) {
                 if (isset($header->kid)) {

@@ -15,6 +15,7 @@
  */
 class JWT
 {
+    const NONE_ALGORITHM = 'none';
     public static $supported_algs = array(
         'HS256' => array('hash_hmac', 'SHA256'),
         'HS512' => array('hash_hmac', 'SHA512'),
@@ -22,6 +23,7 @@ class JWT
         'RS256' => array('openssl', 'SHA256'),
         'RS384' => array('openssl', 'SHA384'),
         'RS512' => array('openssl', 'SHA512'),
+        JWT::NONE_ALGORITHM => array('none', 'none'),
     );
 
     /**

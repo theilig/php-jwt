@@ -15,6 +15,7 @@
  */
 class JWT
 {
+    const CLASS_NAME = __CLASS__;
     const NONE_ALGORITHM = 'none';
     public static $supported_algs = array(
         'HS256' => array('hash_hmac', 'SHA256'),
